@@ -48,7 +48,7 @@ The portfolio now shows trading holdings (with market value and P&L), recent ord
 
 ## Screen Recording
 
-[Link to screen recording will be added here]
+[https://drive.google.com/file/d/1s7HHn7Fj9Wd5NlVOeP_bUilQJyryonPn/view](https://drive.google.com/file/d/1s7HHn7Fj9Wd5NlVOeP_bUilQJyryonPn/view)
 
 ## GitHub Repository Link
 
