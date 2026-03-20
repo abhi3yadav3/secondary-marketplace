@@ -358,8 +358,11 @@ export default function SecondaryTradingDetailPage() {
   }
 
   const handleCancelOrder = async (orderId: string) => {
+    setOrderError('')
+    setOrderSuccess('')
     try {
       await api.post('/trading/orders/cancel', { orderId })
+      setOrderSuccess('Order cancelled successfully')
       fetchUserData()
     } catch (err: any) {
       setOrderError(err.response?.data?.error || 'Failed to cancel order')
