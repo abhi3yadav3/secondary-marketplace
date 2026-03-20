@@ -5,12 +5,15 @@
 I built the full secondary marketplace — users can browse assets, place buy/sell orders, cancel them, and track everything in their portfolio.
 
 ### Marketplace (`/investing/secondary-trading`)
+
 A search bar and category filters (Tech, Healthcare, Energy, etc.) let users find assets quickly. Each card shows the price, trend graph, and performance. Clicking one takes you to the detail page.
 
 ### Trading (`/investing/secondary-trading/[id]`)
+
 The detail page has a 30-day price chart with hover tooltips, a live order book (asks/bids), and an order form with buy/sell toggle, quantity, price, and time-in-force options. There's a confirmation dialog before every order, and your open orders and position show below the chart with a cancel button.
 
 ### Backend APIs
+
 - `POST /api/trading/orders` — places orders with full validation (symbol, quantity, price, balance/share checks), calls the matching engine, and handles cash settlement including price improvement refunds
 - `POST /api/trading/orders/cancel` — cancels open orders and refunds reserved cash
 - `GET /api/trading/orders` — lists orders with optional symbol/status filters
@@ -19,6 +22,7 @@ The detail page has a 30-day price chart with hover tooltips, a live order book 
 - `GET /api/trading/assets` — enhanced with `?search=` and `?category=` params
 
 ### Portfolio (`/account/portfolio`)
+
 The portfolio now shows trading holdings (with market value and P&L), recent orders, and the trading buying power — all integrated into the existing portfolio overview totals.
 
 ## Key Decisions
