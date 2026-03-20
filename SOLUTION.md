@@ -49,3 +49,7 @@ The portfolio now shows trading holdings (with market value and P&L), recent ord
 ## Screen Recording
 
 [Link to screen recording will be added here]
+
+## GitHub Repository Link
+
+[https://github.com/abhi3yadav3/secondary-marketplace](https://github.com/abhi3yadav3/secondary-marketplace)
