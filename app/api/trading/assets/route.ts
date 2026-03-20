@@ -1,18 +1,34 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import secondaryTradingAssets from '@/data/secondaryTradingAssets.json'
 
 export const dynamic = 'force-dynamic'
 
 /**
  * GET /api/trading/assets
- * Returns all available trading assets.
  *
- * TODO: Add query params for filtering/searching (e.g. ?category=tech, ?search=nova)
- * TODO: Consider making this authenticated using getAuthUserId() from '@/lib/auth'
+ * Query params:
+ *   ?search=nova     — filter by title or symbol (case-insensitive)
+ *   ?category=tech   — filter by category
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const assets = secondaryTradingAssets.investments
+    let assets = secondaryTradingAssets.investments as any[]
+
+    const { searchParams } = new URL(request.url)
+    const search = searchParams.get('search')?.toLowerCase()
+    const category = searchParams.get('category')?.toLowerCase()
+
+    if (search) {
+      assets = assets.filter(
+        (a) =>
+          a.title.toLowerCase().includes(search) ||
+          (a.symbol && a.symbol.toLowerCase().includes(search))
+      )
+    }
+
+    if (category && category !== 'all') {
+      assets = assets.filter((a) => a.category.toLowerCase() === category)
+    }
 
     return NextResponse.json({
       assets,
