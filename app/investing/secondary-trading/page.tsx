@@ -1,30 +1,28 @@
 'use client'
 
-/**
- * SECONDARY MARKETPLACE - Asset Listing Page
- *
- * Build this page to display available trading assets with filtering and search.
- * Navigate to /investing/secondary-trading/[id] on asset click.
- *
- * Data: GET /api/trading/assets → { assets: [...], total: 5 }
- * Or: import secondaryTradingAssets from '@/data/secondaryTradingAssets.json'
- * Utils: import { formatCurrency, slugify } from '@/lib/investmentUtils'
- */
-
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Header from '@/components/Header'
+import SecondaryTradingCard, { SecondaryTradingCardData } from '@/components/investments/SecondaryTradingCard'
 import {
   Box,
   Container,
   Typography,
   Grid,
-  Paper,
+  TextField,
+  Chip,
+  InputAdornment,
+  CircularProgress,
 } from '@mui/material'
 import { useTheme } from '@mui/material/styles'
+import { Search } from '@mui/icons-material'
 import { useAuth } from '@/contexts/AuthContext'
 import secondaryTradingAssets from '@/data/secondaryTradingAssets.json'
-import { formatCurrency, getSecondaryTradingSymbol, getSeededColor } from '@/lib/investmentUtils'
+import {
+  formatCurrency,
+  getSecondaryTradingSymbol,
+  buildSecondaryTradingMonthlySeries,
+} from '@/lib/investmentUtils'
 
 type Asset = {
   id: string
@@ -40,101 +38,163 @@ type Asset = {
   symbol?: string
 }
 
+const CATEGORIES = [
+  { key: 'all', label: 'All' },
+  { key: 'tech', label: 'Technology' },
+  { key: 'healthcare', label: 'Healthcare' },
+  { key: 'energy', label: 'Energy' },
+  { key: 'consumer', label: 'Consumer' },
+  { key: 'finance', label: 'Finance' },
+]
+
 export default function SecondaryTradingPage() {
   const router = useRouter()
   const theme = useTheme()
-  const { user, isAuthenticated } = useAuth()
+  const { isAuthenticated } = useAuth()
   const allAssets = secondaryTradingAssets.investments as Asset[]
+  const dailyTemplate = useMemo(
+    () => (secondaryTradingAssets as any).templates?.dailyHistory ?? [],
+    []
+  )
 
-  // ─── Replace this placeholder layout with your implementation ───
+  const [searchQuery, setSearchQuery] = useState('')
+  const [activeCategory, setActiveCategory] = useState('all')
+
+  const filteredAssets = useMemo(() => {
+    let result = allAssets
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase()
+      result = result.filter(
+        (a) =>
+          a.title.toLowerCase().includes(q) ||
+          (a.symbol && a.symbol.toLowerCase().includes(q)) ||
+          getSecondaryTradingSymbol(a.title, a.symbol).toLowerCase().includes(q)
+      )
+    }
+
+    if (activeCategory !== 'all') {
+      result = result.filter((a) => a.category === activeCategory)
+    }
+
+    return result
+  }, [allAssets, searchQuery, activeCategory])
+
+  const cardData: SecondaryTradingCardData[] = useMemo(() => {
+    return filteredAssets.map((asset) => {
+      const symbol = getSecondaryTradingSymbol(asset.title, asset.symbol)
+      const trendData = buildSecondaryTradingMonthlySeries(
+        asset.basePrice,
+        symbol,
+        dailyTemplate,
+        30
+      )
+      return {
+        id: asset.id,
+        title: asset.title,
+        previousValue: asset.previousValue,
+        currentValue: asset.currentValue,
+        performancePercent: asset.performancePercent,
+        isPositive: asset.isPositive,
+        trendData,
+        symbol: asset.symbol,
+        volume: asset.volume,
+        lastPrice: formatCurrency(asset.currentValue),
+        category: asset.category as SecondaryTradingCardData['category'],
+      }
+    })
+  }, [filteredAssets, dailyTemplate])
 
   return (
     <Box sx={{ minHeight: '100vh' }}>
       <Header />
 
       <Container maxWidth="lg" sx={{ pt: { xs: '100px', sm: '120px' }, pb: 4 }}>
-        <Typography variant="h4" sx={{ fontWeight: 700, color: '#ffffff', mb: 1 }}>
+        <Typography variant="h4" sx={{ fontWeight: 700, color: '#ffffff', mb: 0.5 }}>
           Secondary Marketplace
         </Typography>
-        <Typography sx={{ color: '#888888', mb: 4 }}>
+        <Typography sx={{ color: '#888888', mb: 3 }}>
           Browse and trade digital securities on the secondary market.
         </Typography>
 
-        {/* Search & Filters */}
-        <Paper sx={{
-          p: 2, mb: 3,
-          border: '1px dashed rgba(255,255,255,0.15)',
-          borderRadius: 2,
-        }}>
-          <Typography sx={{ color: '#555', fontSize: '14px' }}>
-            Search & filter controls
-          </Typography>
-        </Paper>
+        {/* Search Bar */}
+        <TextField
+          fullWidth
+          placeholder="Search by asset name or symbol..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <Search sx={{ color: '#666' }} />
+              </InputAdornment>
+            ),
+          }}
+          sx={{
+            mb: 2,
+            '& .MuiOutlinedInput-root': {
+              backgroundColor: 'rgba(255,255,255,0.04)',
+              borderRadius: 2,
+              color: '#ffffff',
+              '& fieldset': { borderColor: 'rgba(255,255,255,0.12)' },
+              '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.25)' },
+              '&.Mui-focused fieldset': { borderColor: theme.palette.primary.main },
+            },
+            '& .MuiInputBase-input::placeholder': { color: '#666', opacity: 1 },
+          }}
+        />
+
+        {/* Category Filters */}
+        <Box sx={{ display: 'flex', gap: 1, mb: 3, flexWrap: 'wrap' }}>
+          {CATEGORIES.map((cat) => (
+            <Chip
+              key={cat.key}
+              label={cat.label}
+              clickable
+              onClick={() => setActiveCategory(cat.key)}
+              sx={{
+                fontWeight: 600,
+                fontSize: '13px',
+                borderRadius: '8px',
+                border: '1px solid',
+                borderColor: activeCategory === cat.key
+                  ? theme.palette.primary.main
+                  : 'rgba(255,255,255,0.12)',
+                backgroundColor: activeCategory === cat.key
+                  ? 'rgba(0, 255, 136, 0.12)'
+                  : 'rgba(255,255,255,0.04)',
+                color: activeCategory === cat.key
+                  ? theme.palette.primary.main
+                  : '#aaa',
+                '&:hover': {
+                  backgroundColor: activeCategory === cat.key
+                    ? 'rgba(0, 255, 136, 0.18)'
+                    : 'rgba(255,255,255,0.08)',
+                },
+              }}
+            />
+          ))}
+        </Box>
 
         {/* Asset Cards */}
-        <Grid container spacing={2}>
-          {allAssets.map((asset) => {
-            const symbol = getSecondaryTradingSymbol(asset.title, asset.symbol)
-            return (
-              <Grid item xs={12} sm={6} md={4} key={asset.id}>
-                <Paper
-                  onClick={() => router.push(`/investing/secondary-trading/${asset.id}`)}
-                  sx={{
-                    p: 2.5,
-                    border: '1px dashed rgba(255,255,255,0.15)',
-                    borderRadius: 2,
-                    cursor: 'pointer',
-                    '&:hover': { borderColor: 'rgba(0, 255, 136, 0.3)' },
-                  }}
-                >
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
-                    <Box sx={{
-                      width: 36, height: 36, borderRadius: '8px',
-                      backgroundColor: getSeededColor(symbol),
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}>
-                      <Typography sx={{ color: '#fff', fontWeight: 700, fontSize: '13px' }}>
-                        {symbol.slice(0, 2)}
-                      </Typography>
-                    </Box>
-                    <Box>
-                      <Typography sx={{ color: '#ffffff', fontWeight: 600, fontSize: '14px' }}>
-                        {asset.title}
-                      </Typography>
-                      <Typography sx={{ color: '#888', fontSize: '12px' }}>
-                        {symbol}
-                      </Typography>
-                    </Box>
-                  </Box>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                    <Typography sx={{ color: '#ffffff', fontWeight: 700, fontSize: '18px' }}>
-                      {formatCurrency(asset.currentValue)}
-                    </Typography>
-                    <Typography sx={{
-                      color: asset.isPositive ? theme.palette.primary.main : '#ff4d4d',
-                      fontWeight: 600, fontSize: '13px',
-                    }}>
-                      {asset.isPositive ? '+' : ''}{asset.performancePercent.toFixed(2)}%
-                    </Typography>
-                  </Box>
-                </Paper>
+        {cardData.length === 0 ? (
+          <Box sx={{ textAlign: 'center', py: 8 }}>
+            <Typography sx={{ color: '#666', fontSize: '16px' }}>
+              No assets found matching your search.
+            </Typography>
+          </Box>
+        ) : (
+          <Grid container spacing={2.5}>
+            {cardData.map((card) => (
+              <Grid item xs={12} sm={6} md={4} key={card.id}>
+                <SecondaryTradingCard
+                  card={card}
+                  isAuthenticated={isAuthenticated}
+                />
               </Grid>
-            )
-          })}
-        </Grid>
-
-        {/* Remove this notice once you start building */}
-        <Paper sx={{
-          mt: 4, p: 2.5,
-          border: '1px dashed rgba(255, 200, 0, 0.25)',
-          borderRadius: 2,
-          backgroundColor: 'rgba(255, 200, 0, 0.02)',
-        }}>
-          <Typography sx={{ color: '#998a00', fontSize: '13px', lineHeight: 1.7 }}>
-            The layout above is a generic wireframe to help you get started.
-            Remove it and build your own — this is your playground, feel free to explore.
-          </Typography>
-        </Paper>
+            ))}
+          </Grid>
+        )}
       </Container>
     </Box>
   )
