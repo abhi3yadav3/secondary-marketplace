@@ -265,6 +265,7 @@ export default function SecondaryTradingDetailPage() {
   const [quantity, setQuantity] = useState('')
   const [price, setPrice] = useState('')
   const [timeInForce, setTimeInForce] = useState('day')
+  const [goodTilDate, setGoodTilDate] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [orderError, setOrderError] = useState('')
   const [orderSuccess, setOrderSuccess] = useState('')
@@ -346,6 +347,7 @@ export default function SecondaryTradingDetailPage() {
         quantity: Number(quantity),
         price: Number(price),
         timeInForce,
+        ...(timeInForce === 'gtd' ? { goodTilDate } : {}),
       })
       setOrderSuccess(res.data.message)
       setQuantity('')
@@ -381,6 +383,10 @@ export default function SecondaryTradingDetailPage() {
     }
     if (!Number.isInteger(Number(quantity))) {
       setOrderError('Quantity must be a whole number')
+      return
+    }
+    if (timeInForce === 'gtd' && !goodTilDate) {
+      setOrderError('Please select an expiry date for Good Till Date orders')
       return
     }
     setConfirmOpen(true)
@@ -653,6 +659,30 @@ export default function SecondaryTradingDetailPage() {
                     <MenuItem value="gtc">Good Till Cancelled</MenuItem>
                     <MenuItem value="gtd">Good Till Date</MenuItem>
                   </Select>
+
+                  {/* GTD Date Picker */}
+                  {timeInForce === 'gtd' && (
+                    <>
+                      <Typography sx={{ color: '#888', fontSize: '12px', mb: 0.5 }}>Expiry Date</Typography>
+                      <TextField
+                        fullWidth
+                        type="date"
+                        value={goodTilDate}
+                        onChange={(e) => setGoodTilDate(e.target.value)}
+                        inputProps={{ min: new Date().toISOString().split('T')[0] }}
+                        sx={{
+                          mb: 2.5,
+                          '& .MuiOutlinedInput-root': {
+                            color: '#fff', backgroundColor: 'rgba(255,255,255,0.04)',
+                            '& fieldset': { borderColor: 'rgba(255,255,255,0.12)' },
+                            '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.25)' },
+                            '&.Mui-focused fieldset': { borderColor: theme.palette.primary.main },
+                          },
+                          '& input::-webkit-calendar-picker-indicator': { filter: 'invert(1)' },
+                        }}
+                      />
+                    </>
+                  )}
 
                   {/* Order Total */}
                   <Box sx={{
